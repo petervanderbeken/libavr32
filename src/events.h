@@ -15,6 +15,9 @@ typedef enum {
   kEventSaveFlash,
   kEventClockNormal,
   kEventClockExt,
+  /// connect/disconnect CDC-based devices
+  kEventCDCConnect,
+  kEventCDCDisconnect,
   /// connect/disconnect FTDI-based devices
   kEventFtdiConnect,
   kEventFtdiDisconnect,

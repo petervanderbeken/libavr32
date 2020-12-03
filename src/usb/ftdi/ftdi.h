@@ -40,7 +40,7 @@ extern u8 ftdi_setup(void);
 
 // rx buffer (no status bytes)
 extern u8* ftdi_rx_buf(void);
-// number of bytes from last rx trasnfer
+// number of bytes from last rx transfer
 extern volatile u8 ftdi_rx_bytes(void);
 // busy flags
 extern volatile u8 ftdi_rx_busy(void);

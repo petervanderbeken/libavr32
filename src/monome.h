@@ -103,13 +103,31 @@ extern grid_level_map_t monome_grid_level_map;
 extern ring_map_t monome_ring_map;
 extern refresh_t monome_refresh;
 
+typedef struct {
+  // Checks whether a device is connected.
+  u8 (*connected)(void);
+  // Checks whether the device is being read from or written to.
+  volatile u8 (*rx_busy)(void);
+  volatile u8 (*tx_busy)(void);
+  // Returns the number of bytes from last the last read.
+  volatile u8 (*rx_bytes)(void);
+  // Returns the receiving buffer that contains the bytes from the last read.
+  u8* (*rx_buf)(void);
+  // Execute non-blocking read into the receiving buffer.
+  void (*read)(void);
+  // Write data to the device
+  void (*write)(u8* data, u32 bytes);
+} monome_device_t;
+
 //-------------------------------------
 //------ functions
 
 // initialize
 extern void init_monome(void);
 // check monome device  from FTDI string descriptors
-extern u8 check_monome_device_desc(char* mstr, char* pstr, char* sstr);
+extern u8 check_monome_device_desc(char* mstr, char* pstr, char* sstr, const monome_device_t* dev);
+// check for an extended monome device
+extern u8 check_mext_device(const monome_device_t* dev);
 
 // check dirty flags and refresh leds
 extern void monome_grid_refresh(void);

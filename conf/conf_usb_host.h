@@ -13,7 +13,7 @@
 
 //! Array of UHI APIs Define the list of UHI supported by USB host.
 // #define USB_HOST_UHI        UHI_FTDI , UHI_HID
-#define USB_HOST_UHI        UHI_FTDI, UHI_HID, UHI_MSC, UHI_MIDI
+#define USB_HOST_UHI        UHI_CDC, UHI_FTDI, UHI_HID, UHI_MIDI, UHI_MSC
 
 //! Maximum current allowed on Vbus (mA)
 #define USB_HOST_POWER_MAX  500
@@ -74,6 +74,10 @@
 #define UHI_MSC_CHANGE(dev,b_plug) msc_change(dev, b_plug)
 
 
+// CDC functions
+#define UHI_CDC_CHANGE(dev, b_plug) callback_cdc_change(dev, b_plug)
+#define UHI_CDC_RX_NOTIFY() callback_cdc_rx_notify()
+
 #include "uhi_ftdi.h"
 #include "uhi_hid.h"
 #include "uhi_midi.h"
@@ -81,5 +85,7 @@
 #include "usb.h"
 #include "uhi_msc.h"
 #include "msc.h"
+#include "uhi_cdc.h"
+#include "cdc.h"
 
 #endif // _CONF_USB_HOST_H_
