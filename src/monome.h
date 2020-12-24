@@ -110,7 +110,7 @@ typedef struct {
   volatile u8 (*rx_busy)(void);
   volatile u8 (*tx_busy)(void);
   // Returns the number of bytes from last the last read.
-  volatile u8 (*rx_bytes)(void);
+  volatile u16 (*rx_bytes)(void);
   // Returns the receiving buffer that contains the bytes from the last read.
   u8* (*rx_buf)(void);
   // Execute non-blocking read into the receiving buffer.
@@ -128,6 +128,8 @@ extern void init_monome(void);
 extern u8 check_monome_device_desc(char* mstr, char* pstr, char* sstr, const monome_device_t* dev);
 // check for an extended monome device
 extern u8 check_mext_device(const monome_device_t* dev);
+
+extern void monome_read(void);
 
 // check dirty flags and refresh leds
 extern void monome_grid_refresh(void);

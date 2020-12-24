@@ -84,7 +84,7 @@ static monomeDesc mdesc = {
 static const monome_device_t* mdev;
 
 // local rx byte count
-static u8 rxBytes;
+static u16 rxBytes;
 // event data
 static event_t ev;
 // local tx buffer
@@ -283,6 +283,10 @@ u8 check_monome_device_desc(char* mstr, char* pstr, char* sstr, const monome_dev
 
 u8 check_mext_device(const monome_device_t* dev) {
   return setup_mext(dev);
+}
+
+void monome_read(void) {
+  mdev->read();
 }
 
 // check dirty flags and refresh leds

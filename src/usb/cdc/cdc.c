@@ -18,19 +18,20 @@
 #include "events.h"
 #include "cdc.h"
 #include "monome.h"
-#include "ftdi.h"
 
 static u8 cdcConnected = false;
 
 static u8 rxBuf[CDC_RX_BUF_SIZE];
-static u8 rxBytes = 0;
+static u16 rxBytes = 0;
+static u8 wroteOnce = false;
 static u8 rxBusy = false;
+static u8 txBusy = false;
 static event_t e;
 
 static u8 cdc_connected(void);
 static volatile u8 cdc_rx_busy(void);
 static volatile u8 cdc_tx_busy(void);
-static volatile u8 cdc_rx_bytes(void);
+static volatile u16 cdc_rx_bytes(void);
 static u8* cdc_rx_buf(void);
 static void cdc_read(void);
 static void cdc_write(u8* data, u32 bytes);
@@ -61,24 +62,22 @@ u8 cdc_setup(void) {
   return check_mext_device(&cdcDevice);
 }
 
-// This callback is called when a USB device CDC is plugged or unplugged. 
+// This callback is called when a USB device CDC is plugged or unplugged.
 // We'll post an event, the application can then open and configure the
 // communication port with cdc_setup() if it wants to.
-bool callback_cdc_change(uhc_device_t* dev, bool b_plug) {
+void callback_cdc_change(uhc_device_t* dev, bool b_plug) {
   if (b_plug) {
      e.type = kEventCDCConnect;
      print_dbg("\r\n CDC OPEN");
+     rxBytes = 0;
+     wroteOnce = false;
   } else {
      cdcConnected = false;
      e.type = kEventCDCDisconnect;
+     print_dbg("\r\n CDC CLOSED");
   }
-  return 0;
-}
-
-void callback_cdc_rx_notify(void) {
-  rxBytes = uhi_cdc_get_nb_received(0);
-  uhi_cdc_read_buf(0, rxBuf, rxBytes);
-  rxBusy = false;
+  // posting an event so the main loop can respond
+  event_post(&e);
 }
 
 u8 cdc_connected(void) {
@@ -90,11 +89,10 @@ volatile u8 cdc_rx_busy(void) {
 }
 
 volatile u8 cdc_tx_busy(void) {
-  // FIXME Not sure what value makes sense here! (use uhi_cdc_is_tx_ready?)
-  return 0;
+  return txBusy;
 }
 
-volatile u8 cdc_rx_bytes(void) {
+volatile u16 cdc_rx_bytes(void) {
   return rxBytes;
 }
 
@@ -102,19 +100,46 @@ static u8* cdc_rx_buf(void) {
   return rxBuf;
 }
 
+static void cdc_rx_done(usb_add_t add,
+                        usb_ep_t ep,
+                        uhd_trans_status_t stat,
+                        iram_size_t nb) {
+  rxBytes = nb;
+  if (rxBytes) {
+    (*monome_read_serial)();
+  }
+  rxBusy = false;
+}
+
 void cdc_read(void) {
-  if (rxBusy == false) {
+  if (wroteOnce && !rxBusy) {
     rxBytes = 0;
     rxBusy = true;
-    // This is a bit weird, but as far as I can tell calling uhi_cdc_read_buf
-    // with size 0 will try to start a transfer from the endpoint, and
-    // callback_cdc_rx_notify will then be called as soon as there is data.
-    uhi_cdc_read_buf(0, rxBuf, 0);
+    if (!uhi_cdc_in_run(0, rxBuf, CDC_RX_BUF_SIZE, &cdc_rx_done)) {
+      rxBusy = false;
+    }
+  }
+}
+
+static void cdc_tx_done(usb_add_t add,
+                        usb_ep_t ep,
+                        uhd_trans_status_t stat,
+                        iram_size_t nb) {
+  txBusy = false;
+
+  if (stat != UHD_TRANS_NOERROR) {
+    print_dbg("\r\n CDC tx transfer callback error. status: 0x");
+    print_dbg_hex((u32)stat);
   }
 }
 
 void cdc_write(u8* data, u32 bytes) {
-  // This is documented as returning the number of data remaining, but always
-  // returns 0.
-  uhi_cdc_write_buf(0, data, bytes);
+  if (!txBusy) {
+    txBusy = true;
+    wroteOnce = true;
+    if(!uhi_cdc_out_run(0, data, bytes, &cdc_tx_done)) {
+      print_dbg("\r\n CDC tx transfer error");
+      txBusy = false;
+    }
+  }
 }

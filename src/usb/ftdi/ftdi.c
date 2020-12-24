@@ -24,7 +24,7 @@ u8 ftdiConnect = 0;
 
 //----- static vars
 static u8 rxBuf[FTDI_RX_BUF_SIZE];
-static u32 rxBytes = 0;
+static u16 rxBytes = 0;
 static u8 rxBusy = 0;
 static u8 txBusy = 0;
 static event_t e;
@@ -35,7 +35,6 @@ static void ftdi_rx_done(usb_add_t add,
                          usb_ep_t ep,
                          uhd_trans_status_t stat,
                          iram_size_t nb) {
-  rxBytes = nb - FTDI_STATUS_BYTES;
 
   /* if (stat != UHD_TRANS_NOERROR) { */
   /*   print_dbg("\r\n ftdi rx transfer callback error. status: 0x"); */
@@ -49,12 +48,15 @@ static void ftdi_rx_done(usb_add_t add,
   /* } */
   /* else */
 
-  if (rxBytes) {
+  if (rxBytes >= FTDI_STATUS_BYTES) {
+    rxBytes = nb - FTDI_STATUS_BYTES;
     // check for monome events
     //    if(monome_read_serial != NULL) {
     (*monome_read_serial)();
     //}
     ///... TODO: other protocols
+  } else {
+    rxBytes = 0;
   }
 
   rxBusy = false;
@@ -149,7 +151,7 @@ extern u8* ftdi_rx_buf() {
 }
 
 // number of bytes from last rx trasnfer
-extern volatile u8 ftdi_rx_bytes() {
+extern volatile u16 ftdi_rx_bytes() {
   return rxBytes;
 }
 
